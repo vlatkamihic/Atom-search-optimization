@@ -1,0 +1,45 @@
+import numpy
+from scipy.spatial import distance
+import itertools
+
+list = numpy.random.uniform(12, 32, size=(4))
+print(list)
+
+x1 = numpy.random.uniform(1, 6, size=(4))
+x2 = numpy.random.uniform(2, 7, size=(4))
+
+print(x1)
+print(x2)
+print(distance.euclidean(x1,x2))
+
+x1[1] = 5
+print(x1)
+
+
+x1 = [3] * 10
+print(x1)
+print(distance.euclidean(x1,x2))
+
+"""
+    def __init__(self, minP, maxP, minV, maxV, d, fitValue, depth, multiplierWeight):
+
+        self.dimention = d
+        self.depthWeight = depth
+        self.multiplierWeight = multiplierWeight
+        self.fitValue = fitValue
+        self.mass = 0
+        self.position = numpy.random.uniform(minP, maxP, size=(d))
+        #print(self.position)
+        self.velocity = numpy.random.uniform(minV, maxV, size=(d))
+    
+    def __init__(self, atom):
+
+        self.dimention = atom.dimetion
+        self.depthWeight = atom.depthWeight
+        self.multiplierWeight = atom.multiplierWeight
+        self.fitValue = atom.fitValue
+        self.mass = atom.mass
+        self.position = atom.position
+        #print(self.position)
+        self.velocity = atom.velocity
+"""

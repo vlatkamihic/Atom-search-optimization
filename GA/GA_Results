@@ -1,0 +1,96 @@
+from pandas import *
+import csv
+
+
+def getBestIndividual(fileName):
+    
+    # reading CSV file
+    data = read_csv(fileName)
+
+    bestInds = data['Best individual'].tolist()
+    fit_values = data['Fitness value'].tolist()
+
+
+    return min(bestInds), min(fit_values)
+
+def writeToFile(fileName, fields, rows):
+
+    # writing to csv file  
+    with open(fileName, 'w') as csvfile:
+
+        # creating a csv writer object  
+        csvwriter = csv.writer(csvfile)  
+            
+        # writing the fields  
+        csvwriter.writerow(fields) 
+
+        # writing the data rows  
+        csvwriter.writerows(rows)
+
+
+if __name__ == "__main__":
+
+    roots = ['GA/Rastrigin/', 'GA/Rosenbrock/', 'GA/Pressure_Vessel/']
+
+    for root in roots:
+        
+        parameters = ['EliteMembers/', 'MaxAbsMutation/', 'Mutation/']
+
+        for parameter in parameters:
+
+            dimentions = ['Dimention2/', 'Dimention5/', 'Dimention10/', 'Dimention20/', 'Dimention30/']
+            num_dim = [2, 5, 10, 20, 30]
+            new_file = root + parameter + "Results.csv"
+            fields = ['Best individual', 'Fitness value', 'Dimention', 'Number of elite members', 'Maximum absolute value a mutated gene can have', 'Probability for mutating an individual']
+            
+            rows = []
+            i = 0
+            for dimention in dimentions:
+                folderName = root + parameter + dimention
+                dim = num_dim[i]
+                i = i + 1
+                if(root == 'GA/Pressure_Vessel/'):
+                    folderName = root + parameter
+                    dim = 4
+                
+                if(parameter == 'EliteMembers/'):
+                    elites = [4, 8, 16]
+                    mutation = 0.2
+                    maxAbsMutation = 0.4
+
+                    for elite in elites:
+                        fileName = folderName + "GA_depEliteMembers(" + str(elite) + ").csv"
+                        best_ind, fit_value = getBestIndividual(fileName)
+                        rows.append([str(best_ind), str(fit_value), str(dim), elite, maxAbsMutation, mutation])
+                
+                elif(parameter == 'MaxAbsMutation/'):
+                    maxAbsMutations = [0.1, 0.4, 0.8]
+                    mutation = 0.2
+                    elite = 4
+
+                    for maxAbsMutation in maxAbsMutations:
+                        fileName = folderName + "GA_depMaxAbsMutation(" + str(maxAbsMutation) + ").csv"
+                        best_ind, fit_value = getBestIndividual(fileName)
+                        rows.append([str(best_ind), str(fit_value), str(dim), elite, maxAbsMutation, mutation])
+                
+                elif(parameter == 'Mutation/'):
+                    mutations = [0.05, 0.1, 0.2]
+                    elite = 4
+                    maxAbsMutation = 0.4
+
+                    for mutation in mutations:
+                        filename = folderName + "GA_depMutation(" + str(mutation) + ").csv"
+                        best_ind, fit_value = getBestIndividual(fileName)
+                        rows.append([str(best_ind), str(fit_value), str(dim), elite, maxAbsMutation, mutation])
+                
+                writeToFile(new_file, fields, rows)
+
+                if(root == 'GA/Pressure_Vessel/'):
+                    break
+
+
+                
+                    
+                
+
+

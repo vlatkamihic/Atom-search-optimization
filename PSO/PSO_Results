@@ -1,0 +1,98 @@
+from pandas import *
+import csv
+
+
+def getBestIndividual(fileName):
+    
+    # reading CSV file
+    data = read_csv(fileName)
+    
+    bestInds = data['Best individual'].tolist()
+    fit_values = data['Fitness value'].tolist()
+
+
+    return min(bestInds), min(fit_values)
+
+def writeToFile(fileName, fields, rows):
+
+    # writing to csv file  
+    with open(fileName, 'w') as csvfile:
+
+        # creating a csv writer object  
+        csvwriter = csv.writer(csvfile)  
+            
+        # writing the fields  
+        csvwriter.writerow(fields) 
+
+        # writing the data rows  
+        csvwriter.writerows(rows)
+
+
+if __name__ == "__main__":
+
+    roots = ['PSO/Rastrigin/', 'PSO/Rosenbrock/', 'PSO/Pressure_Vessel/']
+
+    for root in roots:
+        
+        parameters = ['InertiaFactor/', 'SocialFactor/', 'PersonalFactor/']
+
+        for parameter in parameters:
+
+            dimentions = ['Dimention2/', 'Dimention5/', 'Dimention10/', 'Dimention20/', 'Dimention30/']
+            num_dim = [2, 5, 10, 20, 30]
+            new_file = root + parameter + "Results.csv"
+            fields = ['Best individual', 'Fitness value', 'Dimention', 'InertiaFactor', 'SocialFactor', 'PersonalFactor']
+            
+            rows = []
+            i = 0
+            for dimention in dimentions:
+                folderName = root + parameter + dimention
+                dim = num_dim[i]
+                i = i + 1
+                if(root == 'PSO/Pressure_Vessel/'):
+                    folderName = root + parameter
+                    dim = 4
+                if(parameter == 'InertiaFactor/'):
+                    inertiaFactors = [0.0, 0.37, 0.74]
+
+                    socialFactor = 0.5
+                    personalFactor = 0.5
+
+                    for inertia in inertiaFactors:
+                        fileName = folderName + "PSO_depInertiaFactor(" + str(inertia) + ").csv"
+                        best_ind, fit_value = getBestIndividual(fileName)
+                        rows.append([str(best_ind), str(fit_value), str(dim), inertia, socialFactor, personalFactor])
+                
+                elif(parameter == 'SocialFactor/'):
+                    socialFactors = [0.5, 1.0, 1.5]
+                    inertia = 0.37
+                    personalFactor = 0.5
+                    
+                    for socialFactor in socialFactors:
+
+                        fileName = folderName + "PSO_depSocialFactor(" + str(socialFactor) + ").csv"
+                        best_ind, fit_value = getBestIndividual(fileName)
+                        rows.append([str(best_ind), str(fit_value), str(dim), inertia, socialFactor, personalFactor])
+                
+                elif(parameter == 'PersonalFactor/'):
+                    personalFactors = [0.5, 1.0, 1.5]
+                    inertia = 0.0
+                    socialFactor = 0.5
+
+                    for personalFactor in personalFactors:
+
+                        filename = folderName + "PSO_depPersonalFactor(" + str(personalFactor) + ").csv"
+                        best_ind, fit_value = getBestIndividual(fileName)
+                        rows.append([str(best_ind), str(fit_value), str(dim), inertia, socialFactor, personalFactor])
+                
+                writeToFile(new_file, fields, rows)
+
+                if(root == 'PSO/Pressure_Vessel/'):
+                    break
+
+
+                
+                    
+                
+
+
