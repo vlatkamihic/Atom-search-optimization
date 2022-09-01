@@ -79,33 +79,31 @@ def initializeObjects(iteration):
     
     population = Population(POP_SIZE, F_MIN, F_MAX)
 
-    population.generatePopulation(NO_DIMS, ALPHA, BETA)
-    population.evaluatePopulation(costFunction)
-    population.updatePopulation()
+    population.generatePopulation(NO_DIMS)
+   # population.evaluatePopulation(costFunction)
+   # population.updatePopulation()
     
     best_ind = population.getBestInd()
-    gFits = []
+
     gFits = [1, 6]
     
     while min(gFits) != 0.0 and curr_g < NGEN:
         
         print("Generation--"+str(curr_g)+"--")
         #for i in range(POP_SIZE):
-        for i, atom in enumerate(population.atoms):
+        for atom in population.atoms:
             
             atom.fitValue = costFunction(atom.position)
-            if(atom.fitValue < best_ind.fitValue):
-                best_ind.position = atom.position
-                best_ind.velocity = atom.velocity
-                best_ind.fitValue = atom.fitValue
-                
-            position, velocity = population.calculateVelocityAndPosition(ALPHA, BETA, atom, i, best_ind, curr_g+1, NGEN)
+            if(atom.fitValue < population.fit_best):
+                best_ind = atom
+            atom.calculateMass(population.mi_sum, population.getFitBest(), population.getFitWorst())
+            position, velocity = population.calculateVelocityAndPosition(ALPHA, BETA, atom, best_ind, curr_g+1, NGEN)
             atom.position = position
             atom.velocity = velocity
 
-            atom.fitValue = costFunction(position)
+            #atom.fitValue = costFunction(position)
         
-            atom.calculateMass(population.mi_sum, population.getFitBest(), population.getFitWorst())
+           
 
         population.updatePopulation()
 
@@ -117,8 +115,9 @@ def initializeObjects(iteration):
         gFits.clear()
         gFits = population.getFitValues()
         
+        
 
-    print("Best individual is %s, %s" % (best_ind.position, costFunction(best_ind.position)))
+    print("Best individual is %s, %s" % (best_ind.position, best_ind.fitValue))
     
     #Visulaize and save final solution
     f1 = plt.figure()
@@ -134,7 +133,7 @@ def initializeObjects(iteration):
     plt.clf()
     
 
-    return best_ind.position, costFunction(best_ind.position)
+    return best_ind.position, best_ind.fitValue
 
 
 def depAlpha(dimention):

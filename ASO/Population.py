@@ -59,10 +59,11 @@ class Population(object):
         
     
 
-    def generatePopulation(self, d, depth, multiplierWeight):
+    def generatePopulation(self, d):
+        self.atoms.clear()
         for i in range(self.pop_size):
             fitValue = sys.float_info.max
-            self.atoms.append(Atom(self.f_min, self.f_max, d, fitValue, depth, multiplierWeight))
+            self.atoms.append(Atom(self.f_min, self.f_max, d, fitValue))
 
     def evaluatePopulation(self, costFunction):
 
@@ -83,14 +84,17 @@ class Population(object):
         return mi_sum
     
     def calculateKbest(self, cur_iter, num_iter):
+
         newlist = []
         for atom in self.atoms: newlist.append(atom)
         for i in range(len(newlist)):
-            for j in range(len(newlist)-1):
-                if(newlist[i].fitValue > newlist[j].fitValue):
-                    temp = newlist[i]
-                    newlist[i] = newlist[j]
-                    newlist[j] = temp
+            for j in range(len(newlist)):
+                if(i == j):
+                    continue
+                if(newlist[i].fitValue < newlist[j].fitValue):
+                    temp = newlist[j]
+                    newlist[j] = newlist[i]
+                    newlist[i] = temp
         K = self.calculateK(cur_iter, num_iter)
         #print("K: "+str(K))
         kBest = []
@@ -175,7 +179,7 @@ class Population(object):
         return f_ij
 
 
-    def calculateInteractionForce(self, alfa, curr_atom, i, cur_iter, num_iter, dimention):
+    def calculateInteractionForce(self, alfa, curr_atom, cur_iter, num_iter, dimention):
 
         depth = self.calculateDepthFactor(alfa, cur_iter, num_iter)
         kBest = self.calculateKbest(cur_iter, num_iter)
@@ -189,7 +193,7 @@ class Population(object):
         return f_i
             
 
-    def calculateAcceleration(self, alpha, beta, curr_atom, i, best_atom, cur_iter, num_iter):
+    def calculateAcceleration(self, alpha, beta, curr_atom, best_atom, cur_iter, num_iter):
         
         acceleration = []
 
@@ -199,29 +203,29 @@ class Population(object):
         for d in range(curr_atom.dimention):
             
             #print("Dimention--"+str(d)+"--")
-            f_i = self.calculateInteractionForce(alpha, curr_atom, i, cur_iter, num_iter, d)
+            f_i = self.calculateInteractionForce(alpha, curr_atom, cur_iter, num_iter, d)
             g_i = self.calculateConstraintForce(curr_atom, best_atom, cur_iter, num_iter, beta, d)
             
             constraction = g_i / m_i
             a = (f_i + constraction)
             #print("Acceleration: "+str(a))
             #print("-------------------------------------")
-            acceleration.append(fromRange(a, 0.1*self.f_min, 0.1*self.f_max))
+            acceleration.append(a)
         
         #print("F: %s, G: %s, a: %s" % (str(f_i), str(g_i), str(acceleration)))
 
         return acceleration
 
-    def calculateVelocityAndPosition(self, alpha, beta, curr_atom, index,  best_atom, cur_iter, num_iter):
+    def calculateVelocityAndPosition(self, alpha, beta, curr_atom, best_atom, cur_iter, num_iter):
 
-        acceleration = self.calculateAcceleration(alpha, beta, curr_atom, index, best_atom, cur_iter, num_iter)
+        acceleration = self.calculateAcceleration(alpha, beta, curr_atom, best_atom, cur_iter, num_iter)
         #print("Acceleration: "+str(acceleration))
         velocity = []
         position = []
 
         for d in range(curr_atom.dimention):
             v = random.uniform(0,1) * curr_atom.velocity[d] + acceleration[d]
-            velocity.append(fromRange(v, 0.1*self.f_min, 0.1*self.f_max))
+            velocity.append(fromRange(v, 0.2*self.f_min, 0.2*self.f_max))
             position.append(curr_atom.position[d] + velocity[d])
         
         #curr_atom.updateParams(position, velocity)
@@ -241,7 +245,7 @@ class Population(object):
         for atom in self.atoms:
             #print("GetFITS fit values: "+str(atom.fitValue))
             gFits.append(atom.fitValue)
-        print(gFits)
+        print("Generation fit values "+ str(gFits))
         return gFits
 
     def getFitWorst(self):

@@ -6,11 +6,9 @@ import sys
 
 class Atom(object):
     
-    def __init__(self, minP, maxP, d, fitValue, depth, multiplierWeight):
+    def __init__(self, minP, maxP, d, fitValue):
 
         self.dimention = d
-        self.depthWeight = depth
-        self.multiplierWeight = multiplierWeight
         self.fitValue = fitValue
         self.mass = float(0.0000001)
         self.mi = float(0.001)
