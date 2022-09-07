@@ -2,16 +2,24 @@ from pandas import *
 import csv
 
 
+
 def getBestIndividual(fileName):
-    
+    #print("filename: " + str(fileName) + "\n\n")
+    if 'GA_depMutation' in fileName:
+        print("filename: " + str(fileName) + "\n\n")
     # reading CSV file
     data = read_csv(fileName)
-
+ 
+    
     bestInds = data['Best individual'].tolist()
     fit_values = data['Fitness value'].tolist()
+    fit_value = min(fit_values)
+    bestInd = []
+    for i in range(len(fit_values)):
+        if(fit_values[i] == fit_value):
+            bestInd = bestInds[i]
 
-
-    return min(bestInds), min(fit_values)
+    return bestInd, fit_value
 
 def writeToFile(fileName, fields, rows):
 
@@ -52,35 +60,42 @@ if __name__ == "__main__":
                 if(root == 'GA/Pressure_Vessel/'):
                     folderName = root + parameter
                     dim = 4
-                
                 if(parameter == 'EliteMembers/'):
                     elites = [4, 8, 16]
-                    mutation = 0.2
-                    maxAbsMutation = 0.4
 
                     for elite in elites:
+                        mutation = 0.2
+                        maxAbsMutation = 0.4
                         fileName = folderName + "GA_depEliteMembers(" + str(elite) + ").csv"
                         best_ind, fit_value = getBestIndividual(fileName)
                         rows.append([str(best_ind), str(fit_value), str(dim), elite, maxAbsMutation, mutation])
                 
                 elif(parameter == 'MaxAbsMutation/'):
                     maxAbsMutations = [0.1, 0.4, 0.8]
-                    mutation = 0.2
-                    elite = 4
 
                     for maxAbsMutation in maxAbsMutations:
+                        mutation = 0.2
+                        elite = 4
+
                         fileName = folderName + "GA_depMaxAbsMutation(" + str(maxAbsMutation) + ").csv"
                         best_ind, fit_value = getBestIndividual(fileName)
                         rows.append([str(best_ind), str(fit_value), str(dim), elite, maxAbsMutation, mutation])
                 
                 elif(parameter == 'Mutation/'):
+                    print("dim " + str(dim) + " ---------------------------------------- ")
+
                     mutations = [0.05, 0.1, 0.2]
-                    elite = 4
-                    maxAbsMutation = 0.4
 
                     for mutation in mutations:
-                        filename = folderName + "GA_depMutation(" + str(mutation) + ").csv"
+                        elite = 4
+                        maxAbsMutation = 0.4
+
+                        fileName = folderName + "GA_depMutation(" + str(mutation) + ").csv"
+                        
                         best_ind, fit_value = getBestIndividual(fileName)
+                        #if mutation == 0.05 and root == 'GA/Rosenbrock/':
+                            #print("filename: " + filename)
+                            #print("dim " + str(dim) + " " + str(best_ind) + "\n")
                         rows.append([str(best_ind), str(fit_value), str(dim), elite, maxAbsMutation, mutation])
                 
                 writeToFile(new_file, fields, rows)

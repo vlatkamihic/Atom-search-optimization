@@ -37,7 +37,6 @@ def costFunction(individual):
     #Implement Pressure_Vessel function
     global F_MIN_VAL
     global designConstraits
-    global BOUND
 
     Ts = individual[0]
     Th = individual[1]
@@ -231,7 +230,7 @@ def depPersonalFactor():
         
         setParams(inertia, socialFactor, personalFactor, name)
         
-        fields = ['Best individual', 'Fitness value']
+        fields = ['Best individual', 'Fitness value', 'Design constraits']
         rows = []
         
         for i in range(1, NO_EXP+1):
@@ -264,7 +263,7 @@ def depSocialFactor():
         
         setParams(inertia, socialFactor, personalFactor, name)
         
-        fields = ['Best individual', 'Fitness value']
+        fields = ['Best individual', 'Fitness value', 'Design constraits']
         rows = []
         
         for i in range(1, NO_EXP+1):
@@ -294,7 +293,7 @@ def depInertiaFactor():
         name = "PSO/Pressure_Vessel/InertiaFactor/"
         setParams(inertia, socialFactor, personalFactor, name)
         
-        fields = ['Best individual', 'Fitness value']
+        fields = ['Best individual', 'Fitness value', 'Design constraits']
         rows = []
         
         for i in range(1, NO_EXP+1):

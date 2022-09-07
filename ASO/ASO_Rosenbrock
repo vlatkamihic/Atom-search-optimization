@@ -9,17 +9,17 @@ import sys
 
 ####General parameters####
 NO_EXP = 5 # number of experiments
-NO_DIMS = 5 #Size of the individual (number of dimensions)
-NGEN = 5 #number of generations
-POP_SIZE = 10  #population size
+NO_DIMS = 2 #Size of the individual (number of dimensions)
+NGEN = 150 #number of generations
+POP_SIZE = 30  #population size
 #########################
 #####ASO parameters######
 ALPHA = 50
 BETA = 0.2
 
 ####Other global variables####
-F_MIN = -2.0    #Rosenbrock function interval
-F_MAX = 2.0     #Rosenbrock function interval
+F_MIN = -5.0    #Rosenbrock function interval
+F_MAX = 5.0     #Rosenbrock function interval
 stop_evolution = False
 q_min_series = []
 q_max_series = []
@@ -27,7 +27,7 @@ q_avg_series = []
 folderName = "ASO/Rosenbrock/"
 
 #Rosenbrock cost function
-def costFunction(position):
+def costFunction(individual):
     #Implement Rosenbrock function
     a = 1
     b = 100
@@ -35,12 +35,13 @@ def costFunction(position):
     n = NO_DIMS
     fit_val = 0
     for i in range(n-1):
-        xi = position[i]
-        xii = position[i+1]
+        xi = individual[i]
+        xii = individual[i+1]
         fit_val += (b*math.pow(xii-math.pow(xi, 2), 2) + math.pow(a-xi, 2))
     
 
     return fit_val
+
 
 def setParams(dimention, alpha, beta, name):
     #Set global variablesF_M
@@ -76,61 +77,51 @@ def initializeObjects(iteration):
     q_avg_series.clear()
     curr_g = 0
     
-    population = Population(POP_SIZE)
+    #print("generatePopulation " + str(NO_DIMS))
 
-    population.generatePopulation(F_MIN, F_MAX, NO_DIMS, ALPHA, BETA)
-    population.evaluatePopulation(costFunction)
-    population.updatePopulation()
+
+    population = Population(POP_SIZE, F_MIN, F_MAX)
+
+    population.generatePopulation(NO_DIMS)
     
-    best_ind = Atom(F_MIN, F_MAX, NO_DIMS,sys.float_info.max, ALPHA, BETA)
+    best_ind = population.getBestInd(NO_DIMS)
 
-    gFits = population.getFitValues()
+    gFits = [1, 6]
 
+    #print("Pouplation generated " + str(list(map( lambda atom: len(atom.position), population.atoms))))
+    
     while min(gFits) != 0.0 and curr_g < NGEN:
-
-        #for i in range(POP_SIZE):
-        for i, atom in enumerate(population.atoms):
+        
+        #print("Generation--"+str(curr_g)+"--" + " best_ind " + str(best_ind.fitValue) +" population.fit_best " + str(population.fit_best))
+        
+        for atom in population.atoms:
             
-            #print("FIT VALUE: %s" % (str(atom.fitValue)))
-            #print("FIT VALUE: %s" % (str(population.atoms[i].fitValue)))
-            pos = atom.position
-        
-            #newatom = Atom(F_MIN, F_MAX, NO_DIMS,atom.fitValue, ALPHA, BETA)
-            #newatom.updateAtom(atom)
-            position, velocity = population.calculateVelocityAndPosition(ALPHA, BETA, atom, best_ind, curr_g, NGEN)
-            population.atoms[i].position = position
-            population.atoms[i].velocity = velocity
+            atom.fitValue = costFunction(atom.position)
+            if(atom.fitValue < best_ind.fitValue):
+                best_ind = population.getBestInd(NO_DIMS)
+            atom.calculateMass(population.mi_sum, population.getFitBest(), population.getFitWorst())
+            position, velocity = population.calculateVelocityAndPosition(ALPHA, BETA, atom, best_ind, curr_g+1, NGEN)
+            atom.position = position
+            atom.velocity = velocity
 
-            population.atoms[i].fitValue = costFunction(position)
-        
-            #print("Old position: %s, new position: %s, fit: %s" % (str(pos), str(population.atoms[i].position), str(atom.fitValue)))
+            #atom.fitValue = costFunction(position)
 
-            if(population.atoms[i].fitValue < population.fit_best):
-                population.fit_best = atom.fitValue
-                best_ind.position = atom.position
-                best_ind.velocity = atom.velocity
-                best_ind.fitValue = atom.fitValue
-                best_ind.calculateMass(population.mi_sum, population.getFitBest(), population.getFitWorst())
-                #print("FIT VALUE: %s" % (str(best_ind.fitValue)))
-            population.atoms[i].calculateMass(population.mi_sum, population.getFitBest(), population.getFitWorst())
-
-        #population.evaluatePopulation(costFunction)
-        #population.updatePopulation()
+        population.updatePopulation()
 
         curr_g += 1
-        gFits = population.getFitValues()
-        print("GEN: "+str(curr_g))
-        for atom in population.atoms:
-            print("pos: "+str(atom.position)+" fit: "+str(atom.fitValue))
-        #print("MIn gfits: "+str(min(gFits)))
+        
         q_min_series.append(min(gFits))
+        #print("Best for gen " + str(curr_g) + " :" + str(min(gFits)))
         q_max_series.append(max(gFits))
         q_avg_series.append(average(gFits))
+        gFits.clear()
+        gFits = population.getFitValues()
         
-        
-    
-    #Printing best individual
-    print("Best individual is %s, %s" % (best_ind.position, best_ind.fitValue))
+    #print("------------------")
+    gFits.clear()
+    del population
+    #print("Best individual is(q_min_series)" + str(min(q_min_series)))
+    #print("Best individual is %s, %s" % (best_ind.position, best_ind.fitValue))
     
     #Visulaize and save final solution
     f1 = plt.figure()
@@ -140,17 +131,17 @@ def initializeObjects(iteration):
     plt.xlabel('Generations')
     plt.ylabel('Fitness values')
     plt.legend(["MIN", "MAX", "AVG"], loc ="upper center", ncol = 3)
-    plt.show()
-    title = folderName + "ASO_iter_" + str(iteration) + "_faktor_inercije(" + str(ALPHA) + ")_individualni_faktor(" + str(BETA) + ")_socijalni_faktor(" + ").png"
+    #plt.show()
+    title = folderName + "ASO_iter_" + str(iteration) + "_dubinska_tezina(" + str(ALPHA) + ")_tezina_mnozitelja(" + str(BETA) + ").png"
     plt.savefig(title)
     plt.clf()
     
 
-    return best_ind
+    return best_ind.position, best_ind.fitValue
 
 
 def depAlpha(dimention):
-    alphas = [50, 60, 70]
+    alphas = [40, 50, 60]
 
     for alpha in alphas:
         beta = 0.2
@@ -166,7 +157,7 @@ def depAlpha(dimention):
             rows.append([str(best_ind), str(fit_value)])
         
         filename = folderName + "ASO_depAlpha(" + str(alpha) + ").csv"
-      
+        #print("-----------------------")
         # writing to csv file  
         with open(filename, 'w') as csvfile:  
             # creating a csv writer object  
@@ -180,7 +171,7 @@ def depAlpha(dimention):
 
 
 def depBeta(dimention):
-    betas = [0.2, 0.1, 0.3]
+    betas = [0.1, 0.2, 0.3]
 
     for beta in betas:
         alpha = 50

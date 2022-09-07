@@ -255,7 +255,7 @@ def depMutation():
         maxAbsMutation = 0.4
         name = "GA/Pressure_Vessel/Mutation/"
         setParams(mutation, elite, maxAbsMutation, name)
-        fields = ['Best individual', 'Fitness value']
+        fields = ['Best individual', 'Fitness value', 'Design constraits']
         rows = []
         for i in range(1, NO_EXP+1):
             best_ind, designConstraits = initializeAndGenerateObjects(i)
@@ -284,7 +284,7 @@ def depEliteMembers():
         maxAbsMutation = 0.4
         name = "GA/Pressure_Vessel/EliteMembers/"
         setParams(mutation, elite, maxAbsMutation, name)
-        fields = ['Best individual', 'Fitness value']
+        fields = ['Best individual', 'Fitness value', 'Design constraits']
         rows = []
         for i in range(1, NO_EXP+1):
             best_ind, designConstraits = initializeAndGenerateObjects(i)
@@ -312,7 +312,7 @@ def depMaxAbsMutation():
         name = "GA/Pressure_Vessel/MaxAbsMutation/"
         setParams(mutation, elite, maxAbsMutation, name)
         
-        fields = ['Best individual', 'Fitness value']
+        fields = ['Best individual', 'Fitness value', 'Design constraits']
         rows = []
         
         for i in range(1, NO_EXP+1):

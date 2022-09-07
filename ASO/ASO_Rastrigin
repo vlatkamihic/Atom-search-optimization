@@ -7,11 +7,13 @@ from atom import Atom
 from Population import Population
 import sys
 
+plt.rcParams.update({'figure.max_open_warning': 0})
+
 ####General parameters####
 NO_EXP = 5 # number of experiments
 NO_DIMS = 2 #Size of the individual (number of dimensions)
 NGEN = 150 #number of generations
-POP_SIZE = 4  #population size
+POP_SIZE = 30  #population size
 #########################
 #####ASO parameters######
 ALPHA = 50
@@ -31,7 +33,7 @@ def costFunction(individual):
     #Implement Rastrigin function
     A = 10
     omega = 2*math.pi
-    
+    #print("costFunction NO_DIMS" + str(NO_DIMS) + " individual[i] " + str(individual))
     n = NO_DIMS
     fit_val = A*n
     for i in range(n):
@@ -77,46 +79,50 @@ def initializeObjects(iteration):
     q_avg_series.clear()
     curr_g = 0
     
+    #print("generatePopulation " + str(NO_DIMS))
+
+
     population = Population(POP_SIZE, F_MIN, F_MAX)
 
     population.generatePopulation(NO_DIMS)
-   # population.evaluatePopulation(costFunction)
-   # population.updatePopulation()
     
-    best_ind = population.getBestInd()
+    best_ind = population.getBestInd(NO_DIMS)
 
     gFits = [1, 6]
+
+    #print("Pouplation generated " + str(list(map( lambda atom: len(atom.position), population.atoms))))
     
     while min(gFits) != 0.0 and curr_g < NGEN:
         
-        print("Generation--"+str(curr_g)+"--")
-        #for i in range(POP_SIZE):
+        #print("Generation--"+str(curr_g)+"--" + " best_ind " + str(best_ind.fitValue) +" population.fit_best " + str(population.fit_best))
+        
         for atom in population.atoms:
             
             atom.fitValue = costFunction(atom.position)
-            if(atom.fitValue < population.fit_best):
-                best_ind = atom
+            if(atom.fitValue < best_ind.fitValue):
+                best_ind = population.getBestInd(NO_DIMS)
             atom.calculateMass(population.mi_sum, population.getFitBest(), population.getFitWorst())
             position, velocity = population.calculateVelocityAndPosition(ALPHA, BETA, atom, best_ind, curr_g+1, NGEN)
             atom.position = position
             atom.velocity = velocity
 
             #atom.fitValue = costFunction(position)
-        
-           
 
         population.updatePopulation()
 
         curr_g += 1
         
         q_min_series.append(min(gFits))
+        #print("Best for gen " + str(curr_g) + " :" + str(min(gFits)))
         q_max_series.append(max(gFits))
         q_avg_series.append(average(gFits))
         gFits.clear()
         gFits = population.getFitValues()
         
-        
-
+    #print("------------------")
+    gFits.clear()
+    del population
+    #print("Best individual is(q_min_series)" + str(min(q_min_series)))
     print("Best individual is %s, %s" % (best_ind.position, best_ind.fitValue))
     
     #Visulaize and save final solution
@@ -131,13 +137,14 @@ def initializeObjects(iteration):
     title = folderName + "ASO_iter_" + str(iteration) + "_dubinska_tezina(" + str(ALPHA) + ")_tezina_mnozitelja(" + str(BETA) + ").png"
     plt.savefig(title)
     plt.clf()
+    plt.close(f1)
     
 
     return best_ind.position, best_ind.fitValue
 
 
 def depAlpha(dimention):
-    alphas = [50, 60, 70]
+    alphas = [40, 50, 60]
 
     for alpha in alphas:
         beta = 0.2
@@ -153,7 +160,7 @@ def depAlpha(dimention):
             rows.append([str(best_ind), str(fit_value)])
         
         filename = folderName + "ASO_depAlpha(" + str(alpha) + ").csv"
-      
+        #print("-----------------------")
         # writing to csv file  
         with open(filename, 'w') as csvfile:  
             # creating a csv writer object  
@@ -167,7 +174,7 @@ def depAlpha(dimention):
 
 
 def depBeta(dimention):
-    betas = [0.2, 0.1, 0.3]
+    betas = [0.1, 0.2, 0.3]
 
     for beta in betas:
         alpha = 50
@@ -201,13 +208,12 @@ def depBeta(dimention):
 def optimizeDimention(dimention):
     
     depAlpha(dimention)
-    #depBeta(dimention)
+    depBeta(dimention)
 
 
 
 if __name__ == "__main__":
-    #dimentions = [2, 3, 5, 10, 20, 30]
-    dimentions = [2, 3]
+    dimentions = [2, 3, 5, 10, 20, 30]
 
-    #for dimention in dimentions:
-    optimizeDimention(2)
+    for dimention in dimentions:
+        optimizeDimention(dimention)

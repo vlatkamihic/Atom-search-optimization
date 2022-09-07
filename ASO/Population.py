@@ -1,11 +1,17 @@
 from hashlib import new
 from telnetlib import GA
-import numpy
+import numpy as np
 from atom import Atom
 import math
 from scipy.spatial import distance
 import random
 import sys
+
+def copyAtoms(atoms):
+    copy = []
+    for atom in atoms:
+        copy.append(atom)
+    return copy
 
 def calcSumDis(pDim, kBest, i):
     sum = 0
@@ -13,24 +19,6 @@ def calcSumDis(pDim, kBest, i):
         sum += atom.position[i] - pDim
     return sum
 
-def calculateNorm(x_i, x_j):
-    sum_abs = 0
-    for i in x_i:
-        sum_abs += math.pow(i, 2)
-    for j in x_j:
-        sum_abs += math.pow(j, 2)
-
-    norm = math.sqrt(sum_abs)
-    return norm
-
-def euclideanDistance(x_i, x_j):
-    sum_abs = 0
-    n = len(x_i)
-    for i in range(n):
-        sum_abs += math.pow((x_i[i]-x_j[i]), 2)
-
-    dist = math.sqrt(sum_abs)
-    return dist
 
 def fromRange(value, min, max):
     newValue = value
@@ -43,7 +31,7 @@ def fromRange(value, min, max):
     return newValue
 
 
-class Population(object):
+class Population():
 
     atoms = []
     def __init__(self, pop_size, f_min, f_max):
@@ -53,14 +41,13 @@ class Population(object):
         #self.fit_best = sys.float_info.max
         self.fit_best = float(sys.float_info.max)
         self.fit_worst = float(0)
-        self.mi_sum = 1
+        self.mi_sum = float(0)
         self.g_0 = 1.1
-        self.u = 1.24
+        self.u = 2.4 #1.24
         
     
 
     def generatePopulation(self, d):
-        self.atoms.clear()
         for i in range(self.pop_size):
             fitValue = sys.float_info.max
             self.atoms.append(Atom(self.f_min, self.f_max, d, fitValue))
@@ -74,7 +61,7 @@ class Population(object):
             #print("%s. iteration fitValue: %s" % (str(i), str(costFunction(pos))))
 
     def calculateK(self, cur_iter, num_iter):
-        return self.pop_size - (self.pop_size - 2) * (math.sqrt(cur_iter / num_iter))
+        return int(self.pop_size - (self.pop_size - 2) * (math.sqrt(cur_iter / num_iter))) + 1
 
     def calculateMiSum(self):
         mi_sum = 0
@@ -83,72 +70,40 @@ class Population(object):
         self.mi_sum = mi_sum
         return mi_sum
     
-    def calculateKbest(self, cur_iter, num_iter):
-
-        newlist = []
-        for atom in self.atoms: newlist.append(atom)
-        for i in range(len(newlist)):
-            for j in range(len(newlist)):
-                if(i == j):
-                    continue
-                if(newlist[i].fitValue < newlist[j].fitValue):
-                    temp = newlist[j]
-                    newlist[j] = newlist[i]
-                    newlist[i] = temp
+    def calculateKbest(self, curr_atom, cur_iter, num_iter):
         K = self.calculateK(cur_iter, num_iter)
-        #print("K: "+str(K))
-        kBest = []
-        for i in range(round(K)):
-            kBest.append(newlist[i])
-      
-        #self.fit_best = newlist[0].fitValue
-        #self.fit_worst = newlist[self.pop_size - 1].fitValue
+        kTemp = copyAtoms(self.atoms)
+        kTemp = sorted(kTemp, key=lambda atom: atom.mass, reverse=True)
+
+        thisIndex = kTemp.index(curr_atom)
+        n = len(kTemp) - thisIndex
+        kBest = copyAtoms(kTemp)[thisIndex:min(K, n)]
+   
+        
         return kBest
 
     def calculateDriftFactor(self, cur_iter, num_iter):
         return 0.1 * math.sin((math.pi / 2) * (cur_iter / num_iter))
 
-    def calculateConstraintForce(self, curr_atom, best_atom, cur_iter, num_iter, beta, dimention):
+    def calculateConstraintForce(self, curr_atom, best_atom, beta, dimention):
         
-        lagrangian = beta * math.exp(-(20*cur_iter) / num_iter)
-        g_i = lagrangian * (best_atom.position[dimention] - curr_atom.position[dimention])
+        g_i = beta * (best_atom.position[dimention] - curr_atom.position[dimention])
         
-        #print("Lagrangian: "+str(lagrangian))
-        #print("Constraint: "+str(g_i))
         return g_i
 
-    def calculateDepthFactor(self, alfa, cur_iter, num_iter):
-        base = 1 - (cur_iter-1)/(num_iter)
-        eta = alfa * (math.pow(base, 3)) * math.exp(-(20*cur_iter)/num_iter)
-        return eta
-
-    def calculateLengthScale(self, x_i, K, kBest, j):
-        
-        x_ij = x_i[j]
-
-        
-        sum = 0
-        for k in kBest:
-            x_ij_temp = k.position[j]
-            sum += x_ij_temp
-        
-        secElement = sum / K
-        lengthScale = float(math.sqrt(math.pow(x_ij, 2)+math.pow(secElement, 2)))
-        if(lengthScale == 0):
-            lengthScale = 1
-        #print("Length scale(sigma): "+str(lengthScale))
-        return lengthScale
 
 
-    def calculateHij(self, curr_atom, atom, d, cur_iter, num_iter):
+    def calculateHij(self, curr_atom, atom, d, cur_iter, num_iter, r_ij):
         h_min = self.g_0 + self.calculateDriftFactor(cur_iter, num_iter)
         h_max = self.u
 
-        r_ij = euclideanDistance(curr_atom.position, atom.position)
-        K = self.calculateK(cur_iter, num_iter)
-        kBest = self.calculateKbest(cur_iter, num_iter)
+        kBest = self.calculateKbest(curr_atom, cur_iter, num_iter)
 
-        length_scale = self.calculateLengthScale(curr_atom.position, K, kBest, d)
+        mk_average = np.mean([atom.position[d] for atom in kBest])
+        length_scale = np.linalg.norm(curr_atom.position[d] - mk_average)
+
+        if(length_scale == 0):
+            length_scale = 1
 
         h_ij = 0
         if((r_ij/length_scale) < h_min):
@@ -157,38 +112,33 @@ class Population(object):
             h_ij = h_max
         else:
             h_ij = r_ij/length_scale
-        #print("h_ij: "+str(h_ij))
+        #print("hStuff: h_ij "+ str(h_ij) + " h_min " + str(h_min) + " h_max " + str(h_max))
         return h_ij
 
     
 
     def calculateForce(self, curr_atom, atom, d, cur_iter, num_iter):
+        c = (1 - cur_iter / num_iter) ** 3
+        eps = 2 ** (-52)
+        radius = np.linalg.norm(curr_atom.position[d] - atom.position[d])
+        h_ij = self.calculateHij(curr_atom, atom, d, cur_iter, num_iter, radius)
         
-        h_ij = self.calculateHij(curr_atom, atom, d, cur_iter, num_iter)
-        #m_i = curr_atom.calculateMass(self.mi_sum, self.fit_best, self.fit_worst)
-        m_i = curr_atom.mass
-        x_i = curr_atom.position
-        x_j = atom.position
-        euclidean_norm = calculateNorm(x_i, x_j)
-        norm = (x_j[d]-x_i[d])/(euclidean_norm)
-
-        f_ij = random.uniform(0,1) * ((2*math.pow(h_ij, 13)-math.pow(h_ij, 7))/m_i) * norm
-        #f_ij = random.choice([0,1]) * ((2*math.pow(h_ij, 13)-math.pow(h_ij, 7))/m_i) * norm
-        #f_ij = random.choice([0,1]) * ((2*math.pow(h_ij, 13)-math.pow(h_ij, 7))) * norm
+        potential = c * (12 * (-h_ij) ** (-13) - 6 * (-h_ij) ** (-7))
+        f_ij = np.random.uniform(0,1) * potential * ((atom.position[d] - curr_atom.position[d]) / (radius + eps))
         
         return f_ij
 
 
     def calculateInteractionForce(self, alfa, curr_atom, cur_iter, num_iter, dimention):
 
-        depth = self.calculateDepthFactor(alfa, cur_iter, num_iter)
-        kBest = self.calculateKbest(cur_iter, num_iter)
+        
+        kBest = self.calculateKbest(curr_atom, cur_iter, num_iter)
+        
         f_temp = 0
-        j = 0
         for atom in kBest:
             f_temp += self.calculateForce(curr_atom, atom, dimention, cur_iter, num_iter)
-            j += 1
-        f_i = -depth * f_temp
+        f_i = alfa * f_temp
+        #print("hStuff: curr_atom" + str(cur_iter))
         #print("Force(f_i): "+str(f_i))
         return f_i
             
@@ -196,7 +146,7 @@ class Population(object):
     def calculateAcceleration(self, alpha, beta, curr_atom, best_atom, cur_iter, num_iter):
         
         acceleration = []
-
+        lagrangian = np.exp(-20.0 * (cur_iter + 1) / num_iter)
         #m_i = curr_atom.calculateMass(self.mi_sum, self.fit_best, self.fit_worst)
         m_i = curr_atom.mass
 
@@ -204,14 +154,13 @@ class Population(object):
             
             #print("Dimention--"+str(d)+"--")
             f_i = self.calculateInteractionForce(alpha, curr_atom, cur_iter, num_iter, d)
-            g_i = self.calculateConstraintForce(curr_atom, best_atom, cur_iter, num_iter, beta, d)
-            
-            constraction = g_i / m_i
-            a = (f_i + constraction)
+            g_i = self.calculateConstraintForce(curr_atom, best_atom, beta, d)
+
+            a = lagrangian * (f_i + g_i) / m_i
             #print("Acceleration: "+str(a))
             #print("-------------------------------------")
             acceleration.append(a)
-        
+        #print("forceStuff: Total force on " + str(atom_num) + " is "  + str(total_force))
         #print("F: %s, G: %s, a: %s" % (str(f_i), str(g_i), str(acceleration)))
 
         return acceleration
@@ -222,16 +171,23 @@ class Population(object):
         #print("Acceleration: "+str(acceleration))
         velocity = []
         position = []
-
+        w = 0.9 * 0.5 * (cur_iter / num_iter)
+        c1 = -10 * ((cur_iter / num_iter) ** 2)
+        c2 = 1 -(-10 * math.pow(cur_iter / num_iter, 2))
         for d in range(curr_atom.dimention):
-            v = random.uniform(0,1) * curr_atom.velocity[d] + acceleration[d]
-            velocity.append(fromRange(v, 0.2*self.f_min, 0.2*self.f_max))
+            #v = random.uniform(0,1) * curr_atom.velocity[d] + acceleration[d]
+            rand = random.uniform(0, 1)
+            v = w*rand*curr_atom.velocity[d] + c1*rand*acceleration[d] + c2*rand*(best_atom.position[d]-curr_atom.position[d])
+            
+            velocity.append(fromRange(v, 0.1*self.f_min, 0.1*self.f_max))
+            
             position.append(curr_atom.position[d] + velocity[d])
         
         #curr_atom.updateParams(position, velocity)
 
 
         return position, velocity
+
 
     def calculateMassForEachAtom(self):
         for atom in self.atoms:
@@ -245,7 +201,7 @@ class Population(object):
         for atom in self.atoms:
             #print("GetFITS fit values: "+str(atom.fitValue))
             gFits.append(atom.fitValue)
-        print("Generation fit values "+ str(gFits))
+        #print("Generation fit values "+ str(gFits))
         return gFits
 
     def getFitWorst(self):
@@ -264,11 +220,11 @@ class Population(object):
         #print("FIT BEST: "+str(self.fit_best))
         return self.fit_best
     
-    def getBestInd(self):
-        best_ind = self.atoms[0]
+    def getBestInd(self, d):
+        best_ind = Atom(-5, 5, d, sys.float_info.max)
         for atom in self.atoms:
             if(atom.fitValue == self.fit_best):
-                best_ind = atom
+                best_ind.updateAtom(atom)
         #print("FIT BEST: "+str(self.fit_best))
         return best_ind
 
@@ -278,3 +234,49 @@ class Population(object):
         self.calculateMassForEachAtom()
         self.getFitWorst()
         self.getFitBest()
+
+    def __del__(self):
+  # body of destructor
+        self.atoms.clear()
+
+
+
+
+
+'''
+def calculateLengthScale(self, x_i, K, kBest, j):
+        
+        x_ij = x_i[j]
+
+        
+        sum = 0
+        for k in kBest:
+            x_ij_temp = k.position[j]
+            sum += x_ij_temp
+        
+        secElement = sum / K
+        lengthScale = float(math.sqrt(math.pow(x_ij, 2)+math.pow(secElement, 2)))
+        if(lengthScale == 0):
+            lengthScale = 1
+        #print("Length scale(sigma): "+str(lengthScale))
+        return lengthScale
+'''
+#kBest
+'''
+        for atom in self.atoms: newlist.append(atom)
+        for i in range(len(newlist)):
+            for j in range(len(newlist)):
+                if(i == j):
+                    continue
+                if(newlist[i].fitValue < newlist[j].fitValue):
+                    temp = newlist[j]
+                    newlist[j] = newlist[i]
+                    newlist[i] = temp
+        #print("K: "+str(K))
+        kBest = []
+        for i in range(round(K)):
+            kBest.append(newlist[i])
+      
+        #self.fit_best = newlist[0].fitValue
+        #self.fit_worst = newlist[self.pop_size - 1].fitValue
+        '''
