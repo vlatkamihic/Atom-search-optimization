@@ -139,10 +139,10 @@ def optimizeDimention(dimention):
 
 
 if __name__ == "__main__":
-    start_time = time.time()
-    dimentions = [2, 3, 5, 10, 20, 30]
-
-    for dimention in dimentions:
-        optimizeDimention(dimention)
     
-    print("--- %s seconds ---" % (time.time() - start_time))
+    dimentions = [2, 3, 5, 10, 20, 30]
+    
+    for dimention in dimentions:
+        start_time = time.time()
+        optimizeDimention(dimention)
+        print("--- %s seconds ---" % (time.time() - start_time))
