@@ -81,7 +81,7 @@ if __name__ == "__main__":
 
                     for personalFactor in personalFactors:
 
-                        filename = folderName + "PSO_depPersonalFactor(" + str(personalFactor) + ").csv"
+                        fileName = folderName + "PSO_depPersonalFactor(" + str(personalFactor) + ").csv"
                         best_ind, fit_value = getBestIndividual(fileName)
                         rows.append([str(best_ind), str(fit_value), str(dim), inertia, socialFactor, personalFactor])
                 

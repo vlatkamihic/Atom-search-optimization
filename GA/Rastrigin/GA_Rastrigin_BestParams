@@ -1,9 +1,9 @@
 import math
 from deap import base, creator, tools
 import random
-import operator
 import matplotlib.pyplot as plt
 import csv
+import sys
 
 ####General parameters####
 NO_EXP = 5 # number of experiments
@@ -16,47 +16,34 @@ GA_MUTPB = 0.2 #probability for mutating an individual
 GA_NELT = 4    #number of elite individuals
 GA_MAX_ABS = 0.4 #maximum absolute value a mutated gene can have
 #########################
-
 ####Other global variables####
-F_MIN = -2.0    #Rosenbrock function interval
-F_MAX = 2.0     #Rosenbrock function interval
+F_MIN = -5.0    #Rastrigin function interval
+F_MAX = 5.0     #Rastrigin function interval
 stop_evolution = False
-q_min_series = []
-q_max_series = []
-q_avg_series = []
-folderName = "GA/Rosenbrock/"
+best_fit = sys.float_info.max
+best_pos = 0
 
-#Rosenbrock cost function
+#Rastrigin cost function
 def costFunction(individual):
-    #Implement Rosenbrock function
-    a = 1
-    b = 100
+    #Implement Rastrigin function
+    A = 10
+    omega = 2*math.pi
     
     n = NO_DIMS
-    fit_val = 0
-    for i in range(n-1):
+    fit_val = A*n
+    for i in range(n):
         xi = individual[i]
-        xii = individual[i+1]
-        fit_val += (b*math.pow(xii-math.pow(xi, 2), 2) + math.pow(a-xi, 2))
+        #print(xi)
+        fit_val += (math.pow(xi, 2) - A*math.cos(omega*xi))
     
 
     return fit_val,
 
 
-def setParams(dimention, mutation, elite, maxAbsMutation, name):
+def setParams(dimention, mutation, elite, maxAbsMutation):
     #Set global variables
     global stop_evolution
-    global q_min_series
-    global q_max_series
-    POP_SIZE = 100  #population size
-
-    global q_avg_series
-    global folderName
-    stop_evolution = False    
-    q_min_series.clear()      
-    q_max_series.clear()    
-    q_avg_series.clear()
-    folderName = name
+    stop_evolution = False 
     
     #Set global variables from information on UI
     global NO_DIMS
@@ -123,15 +110,8 @@ def initializeAndGenerateObjects(iteration):
     
 #Function for GA evolution
 def evolveGA(cREATOR, tOOlbox, gPop, gFits, iteration):
-    global q_min_series
-    global q_max_series
-    global q_avg_series
     
     
-    # Variable for keeping track of the number of generations
-    q_min_series.clear()
-    q_max_series.clear()
-    q_avg_series.clear()
     curr_g = 0
     # and curr_g < NGEN
     # Begin the evolution till goal is reached or max number of generation is reached
@@ -142,7 +122,7 @@ def evolveGA(cREATOR, tOOlbox, gPop, gFits, iteration):
         
         # A new generation
         curr_g = curr_g + 1
-        print("-- Generation %i --" % curr_g)
+        #print("-- Generation %i --" % curr_g)
         
         # Select the next generation individuals
         #Select POP_SIZE - NELT number of individuals. Since recombination is between neigbours, not two naighbours should be the clone of the same individual
@@ -179,8 +159,9 @@ def evolveGA(cREATOR, tOOlbox, gPop, gFits, iteration):
         fitnesses = map(tOOlbox.evaluate, invalid_ind)
         for ind, fit in zip(invalid_ind, fitnesses):
             ind.fitness.values = fit
+            
         
-        print("  Evaluated %i individuals" % len(invalid_ind))
+        #print("  Evaluated %i individuals" % len(invalid_ind))
         
         #Replace population with offspring
         gPop[:] = offspring
@@ -188,133 +169,56 @@ def evolveGA(cREATOR, tOOlbox, gPop, gFits, iteration):
         # Gather all the fitnesses in one list and print the stats
         gFits = [ind.fitness.values[0] for ind in gPop]
         
-        length = len(gPop)
-        mean = sum(gFits) / length
-        sum2 = sum(x*x for x in gFits)
-        std = abs(sum2 / length - mean**2)**0.5
-        
-        q_min_series.append(min(gFits))
-        q_max_series.append(max(gFits))
-        q_avg_series.append(mean)
-                
-        # print("  Min %s" % q_min_series.at(q_min_series.count()-1).y())
-        # print("  Max %s" % q_max_series.at(q_max_series.count()-1).y())
-        # print("  Avg %s" % mean)
-        # print("  Std %s" % std)
-        
                 
     #Printing best individual
     best_ind = tools.selBest(gPop, 1)[0]
-    print("Best individual is %s, %s" % (best_ind, best_ind.fitness.values))
+    #print("Best individual is %s, %s" % (best_ind, best_ind.fitness.values))
 
-    #Visulaize and save final solution
-    f1 = plt.figure()
-    plt.plot(q_min_series, 'b', linewidth=0.6)
-    plt.plot(q_max_series, 'g', linewidth=0.6)
-    plt.plot(q_avg_series, 'orange', linewidth=0.6)
-    plt.xlabel('Generations')
-    plt.ylabel('Fitness values')
-    plt.legend(["MIN", "MAX", "AVG"], loc ="upper center", ncol = 3)
-    title = folderName + "GA_iter_" + str(iteration) + "_postotak_mutacije(" + str(GA_MUTPB) + ")_broj_elitnih_članova(" + str(GA_NELT) + ")_max_abs(" + str(GA_MAX_ABS) + ").png"
-    plt.savefig(title)
-    plt.clf()
     
 
     return best_ind
 
-def depMutation(dimention):
-    mutations = [0.05, 0.1, 0.2]
-
-    for mutation in mutations:
-        elite = 4
-        maxAbsMutation = 0.4
-        name = "GA/Rosenbrock/Mutation/Dimention" + str(dimention) + "/"
-        setParams(dimention, mutation, elite, maxAbsMutation, name)
-        fields = ['Best individual', 'Fitness value']
-        rows = []
-        for i in range(1, NO_EXP+1):
-            best_ind = initializeAndGenerateObjects(i)
-            rows.append([str(best_ind), str(best_ind.fitness.values)])
-        filename = folderName + "GA_depMutation(" + str(mutation) + ").csv"
-      
-        # writing to csv file  
-        with open(filename, 'w') as csvfile:  
-            # creating a csv writer object  
-            csvwriter = csv.writer(csvfile)  
-                
-            # writing the fields  
-            csvwriter.writerow(fields)  
-                
-            # writing the data rows  
-            csvwriter.writerows(rows)
-
-
-
-
-def depEliteMembers(dimention):
-    elites = [4, 8, 16]
-
-    for elite in elites:
-        mutation = 0.2
-        maxAbsMutation = 0.4
-        name = "GA/Rosenbrock/EliteMembers/Dimention" + str(dimention) + "/"
-        setParams(dimention, mutation, elite, maxAbsMutation, name)
-        fields = ['Best individual', 'Fitness value']
-        rows = []
-        for i in range(1, NO_EXP+1):
-            best_ind = initializeAndGenerateObjects(i)
-            rows.append([str(best_ind), str(best_ind.fitness.values)])
-        filename = folderName + "GA_depEliteMembers(" + str(elite) + ").csv"
-      
-        # writing to csv file  
-        with open(filename, 'w') as csvfile:  
-            # creating a csv writer object  
-            csvwriter = csv.writer(csvfile)  
-                
-            # writing the fields  
-            csvwriter.writerow(fields)  
-                
-            # writing the data rows  
-            csvwriter.writerows(rows)
-
-
-def depMaxAbsMutation(dimention):
-    maxAbsMutations = [0.1, 0.4, 0.8]
-
-    for maxAbsMutation in maxAbsMutations:
-        mutation = 0.2
-        elite = 4
-        name = "GA/Rosenbrock/MaxAbsMutation/Dimention" + str(dimention) + "/"
-        setParams(dimention, mutation, elite, maxAbsMutation, name)
-        
-        fields = ['Best individual', 'Fitness value']
-        rows = []
-        
-        for i in range(1, NO_EXP+1):
-            best_ind = initializeAndGenerateObjects(i)
-            rows.append([str(best_ind), str(best_ind.fitness.values)])
-        
-        filename = folderName + "GA_depMaxAbsMutation(" + str(maxAbsMutation) + ").csv"
-      
-        # writing to csv file  
-        with open(filename, 'w') as csvfile:
-
-            # creating a csv writer object  
-            csvwriter = csv.writer(csvfile)  
-                
-            # writing the fields  
-            csvwriter.writerow(fields)  
-                
-            # writing the data rows  
-            csvwriter.writerows(rows)
-
-
 
 def optimizeDimention(dimention):
     
-    depMutation(dimention)
-    depEliteMembers(dimention)
-    depMaxAbsMutation(dimention)
+    global best_fit
+    global best_pos
+
+    mutations = [0.05, 0.1, 0.2]
+    elites = [4, 8, 16]
+    maxAbsMutations = [0.1, 0.4, 0.8]
+
+    best_mutation = 0
+    best_elite = 0
+    best_maxAbs = 0
+
+    for mutation in mutations:
+        for elite in elites:
+            for maxAbsMutation in maxAbsMutations:
+                
+                setParams(dimention, mutation, elite, maxAbsMutation)
+                
+                for i in range(1, NO_EXP+1):
+                    best_ind = initializeAndGenerateObjects(i)
+                    if(best_fit > best_ind.fitness.values[0]):
+                        best_fit = best_ind.fitness.values[0]
+                        best_pos = best_ind
+                        best_mutation = mutation
+                        best_elite = elite
+                        best_maxAbs = maxAbsMutation
+                
+    print("Best individual: " + str(best_pos))
+    print(" -fitness value: " + str(best_fit))
+    print(" -dimention: " + str(dimention))
+    print(" -probability for mutating an individual: " + str(best_mutation))
+    print(" -number of elite members: " + str(best_elite))
+    print(" -maximum absolute value a mutated gene can have: " + str(best_maxAbs))
+                
+    best_fit = sys.float_info.max
+    best_pos = 0   
+    best_mutation = 0
+    best_elite = 0
+    best_maxAbs = 0
 
 
 

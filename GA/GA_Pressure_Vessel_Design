@@ -16,10 +16,6 @@ GA_MUTPB = 0.2 #probability for mutating an individual
 GA_NELT = 4    #number of elite individuals
 GA_MAX_ABS = 0.4 #maximum absolute value a mutated gene can have
 #########################
-#####PSO parameters######
-PSO_INERTIA = 0.7   #inertia factor
-PSO_PERSONAL = 1.5  #personal factor
-PSO_SOCIAL = 1.0    #social factor
 
 ####Other global variables####
 F_MIN = 0    #Pressure Vessel Design function interval

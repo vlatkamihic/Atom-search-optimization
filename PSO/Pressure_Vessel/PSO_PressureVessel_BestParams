@@ -1,0 +1,219 @@
+import math
+from deap import base, creator, tools
+import random
+import operator
+import sys
+
+####General parameters####
+NO_EXP = 5 # number of experiments
+NO_DIMS = 4 #Size of the individual (number of dimensions)
+NGEN = 500 #number of generations
+POP_SIZE = 100  #population size
+#########################
+#####PSO parameters######
+PSO_INERTIA = 0.7   #inertia factor
+PSO_PERSONAL = 1.5  #personal factor
+PSO_SOCIAL = 1.0    #social factor
+
+####Other global variables####
+F_MIN = 0    #Pressure Vessel Design function interval
+F_MAX = 200     #Pressure Vessel Design function interval
+G1 = 0 #Hoop stress
+G2 = 0 #Longitudinal stress
+G3 = 0 #Volume
+G4 = 0 #Lenght
+stop_evolution = False
+F_MIN_VAL = sys.float_info.max
+best_fit = sys.float_info.max
+best_pos = 0
+best_designConstraits = 0
+
+#Pressure_Vessel cost function
+def costFunction(individual):
+    #Implement Pressure_Vessel function
+    global F_MIN_VAL
+    global designConstraits
+
+    Ts = individual[0]
+    Th = individual[1]
+    R = individual[2]
+    L = individual[3]
+    
+    fit_val = 0
+    G1 = -Ts + 0.0193*R
+    G2 = -Th + 0.00954*R
+    temp = 4 / 3
+    G3 = -math.pi*math.pow(R, 2)*L - temp*math.pi*math.pow(R, 3) + 1296000
+    G4 = L - 240
+
+    if(Ts > 99 or Ts < 0 or Th > 99 or Th < 0 or R > 200 or R < 10 or L > 200 or L < 10 or G1 > 0 or G2 > 0 or G3 > 0 or G4 > 0):
+        fit_val = 55000000
+    else:
+        fit_val = 0.6224*Ts*R*L + 1.7781*Th*math.pow(R, 2) + 3.1661*math.pow(Ts, 2)*L + 19.84*math.pow(Ts, 2)*R
+    
+
+    if(F_MIN_VAL > fit_val):
+        F_MIN_VAL = fit_val
+        designConstraits = [G1, G2, G3, G4]
+
+    return fit_val,
+
+def setParams(inertia, socialFactor, personalFactor):
+    #Set global variables
+    global stop_evolution
+    stop_evolution = False 
+    
+    #Set global variables from information on UI
+    global PSO_SOCIAL
+    global PSO_INERTIA
+    global PSO_PERSONAL
+    PSO_PERSONAL = personalFactor
+    PSO_SOCIAL = socialFactor
+    PSO_INERTIA = inertia
+
+
+def generateParticle(cr, size, min_val, max_val):
+    #generate particle with random position
+    particle = cr.Particle(random.uniform(min_val, max_val) for _ in range(size))
+    #generate random speed vector for particle
+    particle.speed = list(random.uniform(min_val, max_val) for _ in range(size))
+    particle.best = particle[:]
+    return particle
+
+def updateParticle(particle, g_best, inert_fact, ind_fact, soc_fact):
+    first_part = list(inert_fact * particle.speed[i] for i in range(len(particle.speed)))
+    second_part = list(ind_fact * random.random() * (particle.best[i] - particle[i]) for i in range(len(particle.best)))
+    third_part = list(soc_fact * random.random() * (g_best[i] - particle[i]) for i in range(len(g_best)))
+    #Update particle speed by adding all three parts of the formula
+    particle.speed = list(map(operator.add, map(operator.add, first_part, second_part), third_part))
+    #Update particle position by adding speed to previous particle position
+    particle[:] = list(map(operator.add, particle, particle.speed))
+
+def initializeAndGenerateObjects(iteration):
+    ####Initialize deap PSO objects####
+        
+    #Make creator that minimize. If it would be 1.0 instead od -1.0 than it would be maxmize
+    cREATOR = creator
+    cREATOR.create("FitnessMin", base.Fitness, weights=(-1.0,))
+    
+    #Create an individual (a blueprint for cromosomes) as a list with a specified fitness type
+    cREATOR.create("Particle", list, fitness=cREATOR.FitnessMin, speed=list, best=None)
+
+    #Create base toolbox for finishing creation of a individual (particle) and population
+    tOOlbox = base.Toolbox()
+    
+    #Particle initialization
+    tOOlbox.register("particle", generateParticle, cr=cREATOR, size=NO_DIMS, min_val=F_MIN, max_val=F_MAX)
+    
+    #Create a population of individuals (particles). The population is then created by e.g. toolbox.population(n=300) where 'n' is the number of particles in population
+    tOOlbox.register("population", tools.initRepeat, list, tOOlbox.particle)
+    
+    #Update function for each particle
+    tOOlbox.register("update", updateParticle)
+    
+    #Evaluation function for each particle
+    tOOlbox.register("evaluate", costFunction)
+    
+    ##################################
+    
+    #Create population
+    gPop = tOOlbox.population(n=POP_SIZE)
+    
+    #Evaluate initial population, we map() the evaluation function to every individual and then assign their respective fitness, map runs emaluet function for each individual in pop
+    fitnesses = list(map(tOOlbox.evaluate, gPop))
+    for ind, fit in zip(gPop, fitnesses):
+        ind.fitness.values = fit
+        
+    #Extracting all the fitnesses of all individuals in a population so we can monitor and evovlve the algorithm until it reaches 0 or max number of generation is reached
+    gFits = [ind.fitness.values[0] for ind in gPop]
+    
+    #Extraction current best position
+    global_best_position = tools.selBest(gPop, 1)[0][:]
+
+    #Start evolution
+    return evolvePSO(cREATOR, tOOlbox, gPop, gFits, iteration, global_best_position)
+
+def evolvePSO(cREATOR, tOOlbox, gPop, gFits, iteration, global_best_position):
+    global F_MIN_VAL
+
+    curr_g = 0
+    
+    while min(gFits) != 0.0 and curr_g < NGEN:
+        #Check if evolution and thread need to stop
+        if stop_evolution:
+            break #Break the evolution loop
+            
+        # A new generation
+        curr_g = curr_g + 1
+        #print("-- Generation %i --" % curr_g)
+        
+        #Update particle position and evaluate particle
+        for particle in gPop:
+            #Update
+            tOOlbox.update(particle, global_best_position, PSO_INERTIA, PSO_PERSONAL, PSO_SOCIAL)
+            #Evaluate
+            fit = tOOlbox.evaluate(particle)
+            #Update best position
+            if fit[0] < particle.fitness.values[0]:
+                particle.best = particle[:]
+            #Update fitness
+            particle.fitness.values = fit            
+        
+        #Extracting all the fitnesses of all individuals in a population so we can monitor and evovlve the algorithm until it reaches 0 or max number of generation is reached
+        gFits = [ind.fitness.values[0] for ind in gPop]
+    
+        #Extraction current best position
+        global_best_position = tools.selBest(gPop, 1)[0][:]
+        
+        
+    
+    #Printing best individual
+    best_ind = tools.selBest(gPop, 1)[0]
+    
+    F_MIN_VAL = sys.float_info.max
+
+    return best_ind, designConstraits
+
+
+
+if __name__ == "__main__":
+    
+
+    inertiaFactors = [0.0, 0.37, 0.74]
+    personalFactors = [0.5, 1.0, 1.5]
+    socialFactors = [0.5, 1.0, 1.5]
+
+    best_inertia = 0
+    best_personal = 0
+    best_social = 0
+
+    for inertia in inertiaFactors:
+        for socialFactor in socialFactors:
+            for personalFactor in personalFactors:
+                
+                setParams(inertia, socialFactor, personalFactor)
+                
+                for i in range(1, NO_EXP+1):
+                    best_ind, designConstraits = initializeAndGenerateObjects(i)
+                    if(best_fit > best_ind.fitness.values[0]):
+                        best_fit = best_ind.fitness.values[0]
+                        best_pos = best_ind
+                        best_inertia = inertia
+                        best_personal = personalFactor
+                        best_social = socialFactor
+                        best_designConstraits = designConstraits
+                
+    print("Best individual: " + str(best_pos))
+    print(" -fitness value: " + str(best_fit))
+    print(" -dimention: " + str(NO_DIMS))
+    print(" -inertia factor: " + str(best_inertia))
+    print(" -personal factor: " + str(best_personal))
+    print(" -social factor: " + str(best_social))
+    print(" -design constraits: " + str(best_designConstraits))
+                
+    best_fit = sys.float_info.max
+    best_pos = 0   
+    best_inertia = 0
+    best_personal = 0
+    best_social = 0
+    best_designConstraits = 0
