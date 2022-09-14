@@ -3,6 +3,7 @@ from deap import base, creator, tools
 import random
 import operator
 import sys
+import time
 
 ####General parameters####
 NO_EXP = 5 # number of experiments
@@ -176,9 +177,10 @@ def evolvePSO(cREATOR, tOOlbox, gPop, gFits, iteration, global_best_position):
 
 
 
-if __name__ == "__main__":
-    
 
+
+if __name__ == "__main__":
+    start_time = time.time()
     inertiaFactors = [0.0, 0.37, 0.74]
     personalFactors = [0.5, 1.0, 1.5]
     socialFactors = [0.5, 1.0, 1.5]
@@ -205,7 +207,6 @@ if __name__ == "__main__":
                 
     print("Best individual: " + str(best_pos))
     print(" -fitness value: " + str(best_fit))
-    print(" -dimention: " + str(NO_DIMS))
     print(" -inertia factor: " + str(best_inertia))
     print(" -personal factor: " + str(best_personal))
     print(" -social factor: " + str(best_social))
@@ -217,3 +218,4 @@ if __name__ == "__main__":
     best_personal = 0
     best_social = 0
     best_designConstraits = 0
+    print("--- %s seconds ---" % (time.time() - start_time))

@@ -4,6 +4,7 @@ import random
 import matplotlib.pyplot as plt
 import csv
 import sys
+import time
 
 ####General parameters####
 NO_EXP = 5 # number of experiments
@@ -226,4 +227,6 @@ if __name__ == "__main__":
     dimentions = [2, 3, 5, 10, 20, 30]
 
     for dimention in dimentions:
+        start_time = time.time()
         optimizeDimention(dimention)
+        print("--- %s seconds ---" % (time.time() - start_time))

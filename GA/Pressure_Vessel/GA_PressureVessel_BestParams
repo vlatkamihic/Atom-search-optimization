@@ -4,6 +4,7 @@ import random
 import matplotlib.pyplot as plt
 import csv
 import sys
+import time
 
 ####General parameters####
 NO_EXP = 5 # number of experiments
@@ -203,8 +204,10 @@ def evolveGA(cREATOR, tOOlbox, gPop, gFits, iteration):
 
 
 
-if __name__ == "__main__":
 
+
+if __name__ == "__main__":
+    start_time = time.time()
     mutations = [0.05, 0.1, 0.2]
     elites = [4, 8, 16]
     maxAbsMutations = [0.1, 0.4, 0.8]
@@ -231,7 +234,6 @@ if __name__ == "__main__":
                 
     print("Best individual: " + str(best_pos))
     print(" -fitness value: " + str(best_fit))
-    print(" -dimention: " + str(NO_DIMS))
     print(" -probability for mutating an individual: " + str(best_mutation))
     print(" -number of elite members: " + str(best_elite))
     print(" -maximum absolute value a mutated gene can have: " + str(best_maxAbs))
@@ -243,3 +245,5 @@ if __name__ == "__main__":
     best_elite = 0
     best_maxAbs = 0
     best_designConstraits = 0
+
+    print("--- %s seconds ---" % (time.time() - start_time))
