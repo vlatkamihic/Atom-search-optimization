@@ -1,0 +1,232 @@
+import math
+from deap import base, creator, tools
+import random
+import matplotlib.pyplot as plt
+import csv
+import sys
+import time
+
+####General parameters####
+NO_EXP = 5 # number of experiments
+NO_DIMS = 5 #Size of the individual (number of dimensions)
+NGEN = 500 #number of generations
+POP_SIZE = 100  #population size
+#########################
+######GA parameters######
+GA_MUTPB = 0.2 #probability for mutating an individual
+GA_NELT = 4    #number of elite individuals
+GA_MAX_ABS = 0.4 #maximum absolute value a mutated gene can have
+#########################
+
+####Other global variables####
+F_MIN = -2.0    #Rosenbrock function interval
+F_MAX = 2.0     #Rosenbrock function interval
+stop_evolution = False
+best_fit = sys.float_info.max
+best_pos = 0
+
+#Rosenbrock cost function
+def costFunction(individual):
+    #Implement Rosenbrock function
+    a = 1
+    b = 100
+    
+    n = NO_DIMS
+    fit_val = 0
+    for i in range(n-1):
+        xi = individual[i]
+        xii = individual[i+1]
+        fit_val += (b*math.pow(xii-math.pow(xi, 2), 2) + math.pow(a-xi, 2))
+    
+
+    return fit_val,
+
+
+def setParams(dimention, mutation, elite, maxAbsMutation):
+    #Set global variables
+    global stop_evolution
+    stop_evolution = False 
+    
+    #Set global variables from information on UI
+    global NO_DIMS
+    global GA_MUTPB
+    global GA_NELT
+    global GA_MAX_ABS
+    NO_DIMS = dimention
+    GA_MUTPB = mutation
+    GA_NELT = elite
+    GA_MAX_ABS = maxAbsMutation
+
+    
+
+def initializeAndGenerateObjects(iteration):
+        
+    ####Initialize deap GA objects####
+    
+    #Make creator that minimize. If it would be 1.0 instead od -1.0 than it would be maxmize
+    cREATOR = creator
+    cREATOR.create("FitnessMin", base.Fitness, weights=(-1.0,))
+    
+    #Create an individual (a blueprint for cromosomes) as a list with a specified fitness type
+    cREATOR.create("Individual", list, fitness=cREATOR.FitnessMin)
+    
+    #Create base toolbox for finishing creation of a individual (cromosome)
+    tOOlbox = base.Toolbox()
+    
+    #Define what type of data (number, gene) will it be in the cromosome
+    tOOlbox.register("attr_float", random.uniform, F_MIN, F_MAX) 
+    #Initialization procedure (initRepeat) for the cromosome. For the individual to be completed we need to run initRepeat for the amaout of genes the cromosome includes
+    tOOlbox.register("individual", tools.initRepeat, cREATOR.Individual, tOOlbox.attr_float, n=NO_DIMS)
+    
+    #Create a population of individuals (cromosomes). The population is then created by toolbox.population(n=300) where 'n' is the number of cromosomes in population
+    tOOlbox.register("population", tools.initRepeat, list, tOOlbox.individual)
+    
+    #Register evaluation function
+    tOOlbox.register("evaluate", costFunction)
+    
+    #Register what genetic operators to use
+    #Standard coding
+    tOOlbox.register("mate", tools.cxTwoPoint)#Use two point recombination
+    tOOlbox.register("mutate", tools.mutGaussian, mu=0, sigma=GA_MAX_ABS, indpb=0.5)
+    
+    tOOlbox.register("select", tools.selTournament, tournsize=3)    #Use tournament selection
+    
+    ##################################
+    
+    #Generate initial population. Will be a member variable so we can easely pass everything to new thread
+    gPop = tOOlbox.population(n=POP_SIZE)
+
+    #Evaluate initial population, we map() the evaluation function to every individual and then assign their respective fitness, map runs evaluate function for each individual in pop
+    fitnesses = list(map(tOOlbox.evaluate, gPop))
+    for ind, fit in zip(gPop, fitnesses):
+        ind.fitness.values = fit    #Assign calcualted fitness value to individuals
+    
+    #Extracting all the fitnesses of all individuals in a population so we can monitor and evovlve the algorithm until it reaches 0 or max number of generation is reached
+    gFits = [ind.fitness.values[0] for ind in gPop]
+    
+    #Start evolution
+    return evolveGA(cREATOR, tOOlbox, gPop, gFits, iteration)
+
+
+
+    
+#Function for GA evolution
+def evolveGA(cREATOR, tOOlbox, gPop, gFits, iteration):
+
+    curr_g = 0
+    # and curr_g < NGEN
+    # Begin the evolution till goal is reached or max number of generation is reached
+    while min(gFits) != 0 and curr_g < NGEN:
+        #Check if evolution and thread need to stop
+        if stop_evolution:
+            break #Break the evolution loop
+        
+        # A new generation
+        curr_g = curr_g + 1
+        #print("-- Generation %i --" % curr_g)
+        
+        # Select the next generation individuals
+        #Select POP_SIZE - NELT number of individuals. Since recombination is between neigbours, not two naighbours should be the clone of the same individual
+        offspring = []
+        offspring.append(tOOlbox.select(gPop, 1)[0])    #add first selected individual
+        for i in range(POP_SIZE - GA_NELT - 1):    # -1 because the first seleceted individual is already added
+            while True:
+                new_o = tOOlbox.select(gPop, 1)[0]
+                if new_o != offspring[len(offspring) - 1]:   #if it is different than the last inserted then add to offspring and break
+                    offspring.append(new_o)
+                    break
+        
+        # Clone the selected individuals because all of the changes are inplace
+        offspring = list(map(tOOlbox.clone, offspring))
+        
+        # Apply crossover on the selected offspring
+        for child1, child2 in zip(offspring[::2], offspring[1::2]):
+            tOOlbox.mate(child1, child2)    #inplace recombination
+            #Invalidate new children fitness values
+            del child1.fitness.values
+            del child2.fitness.values
+
+        #Apply mutation on the offspring
+        for mutant in offspring:
+            if random.random() < GA_MUTPB:
+                tOOlbox.mutate(mutant)
+                del mutant.fitness.values
+        
+        #Add elite individuals #Is clonning needed?
+        offspring.extend(list(map(tOOlbox.clone, tools.selBest(gPop, GA_NELT))))         
+                
+        # Evaluate the individuals with an invalid fitness
+        invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
+        fitnesses = map(tOOlbox.evaluate, invalid_ind)
+        for ind, fit in zip(invalid_ind, fitnesses):
+            ind.fitness.values = fit
+            
+        
+        #print("  Evaluated %i individuals" % len(invalid_ind))
+        
+        #Replace population with offspring
+        gPop[:] = offspring
+        
+        # Gather all the fitnesses in one list and print the stats
+        gFits = [ind.fitness.values[0] for ind in gPop]
+        
+                
+    #Printing best individual
+    best_ind = tools.selBest(gPop, 1)[0]
+    #print("Best individual is %s, %s" % (best_ind, best_ind.fitness.values))
+
+    
+
+    return best_ind
+
+
+def optimizeDimention(dimention):
+    
+    global best_fit
+    global best_pos
+
+    mutations = [0.05, 0.1, 0.2]
+    elites = [4, 8, 16]
+    maxAbsMutations = [0.1, 0.4, 0.8]
+
+    best_mutation = 0
+    best_elite = 0
+    best_maxAbs = 0
+
+    for mutation in mutations:
+        for elite in elites:
+            for maxAbsMutation in maxAbsMutations:
+                
+                setParams(dimention, mutation, elite, maxAbsMutation)
+                
+                for i in range(1, NO_EXP+1):
+                    best_ind = initializeAndGenerateObjects(i)
+                    if(best_fit > best_ind.fitness.values[0]):
+                        best_fit = best_ind.fitness.values[0]
+                        best_pos = best_ind
+                        best_mutation = mutation
+                        best_elite = elite
+                        best_maxAbs = maxAbsMutation
+                
+    print("Best individual: " + str(best_pos))
+    print(" -fitness value: " + str(best_fit))
+    print(" -dimention: " + str(dimention))
+    print(" -probability for mutating an individual: " + str(best_mutation))
+    print(" -number of elite members: " + str(best_elite))
+    print(" -maximum absolute value a mutated gene can have: " + str(best_maxAbs))
+                
+    best_fit = sys.float_info.max
+    best_pos = 0   
+    best_mutation = 0
+    best_elite = 0
+    best_maxAbs = 0
+
+
+
+if __name__ == "__main__":
+    dimentions = [2, 3, 5, 10, 20, 30]
+
+    for dimention in dimentions:
+        start_time = time.time()
+        optimizeDimention(dimention)
+        print("--- %s seconds ---" % (time.time() - start_time))

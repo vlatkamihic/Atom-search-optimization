@@ -1,0 +1,150 @@
+import matplotlib.pyplot as plt
+import csv
+import math
+
+from numpy import average
+from atom import Atom
+from Population import Population
+import sys
+import time
+
+plt.rcParams.update({'figure.max_open_warning': 0})
+
+####General parameters####
+NO_EXP = 5 # number of experiments
+NO_DIMS = 2 #Size of the individual (number of dimensions)
+NGEN = 150 #number of generations
+POP_SIZE = 30  #population size
+#########################
+#####ASO parameters######
+ALPHA = 50
+BETA = 0.2
+
+####Other global variables####
+F_MIN = -5.0    #Rastrigin function interval
+F_MAX = 5.0     #Rastrigin function interval
+stop_evolution = False
+best_fit = sys.float_info.max
+best_pos = 0
+
+#Rastrigin cost function
+def costFunction(individual):
+    #Implement Rastrigin function
+    A = 10
+    omega = 2*math.pi
+    #print("costFunction NO_DIMS" + str(NO_DIMS) + " individual[i] " + str(individual))
+    n = NO_DIMS
+    fit_val = A*n
+    for i in range(n):
+        xi = individual[i]
+        #print(xi)
+        fit_val += (math.pow(xi, 2) - A*math.cos(omega*xi))
+    
+
+    return fit_val
+
+
+def setParams(dimention, alpha, beta):
+    #Set global variablesF_M
+    global stop_evolution
+    stop_evolution = False 
+    
+    #Set global variables
+    global ALPHA
+    global BETA
+    global NO_DIMS
+    ALPHA = alpha
+    BETA = beta
+    NO_DIMS = dimention
+
+
+def initializeObjects(iteration):
+
+    curr_g = 0
+    
+    #print("generatePopulation " + str(NO_DIMS))
+
+
+    population = Population(POP_SIZE, F_MIN, F_MAX)
+
+    population.generatePopulation(NO_DIMS)
+    
+    best_ind = population.getBestInd(NO_DIMS)
+
+    #print("Pouplation generated " + str(list(map( lambda atom: len(atom.position), population.atoms))))
+    
+    while curr_g < NGEN:
+        
+        #print("Generation--"+str(curr_g)+"--" + " best_ind " + str(best_ind.fitValue) +" population.fit_best " + str(population.fit_best))
+        
+        for atom in population.atoms:
+            
+            atom.fitValue = costFunction(atom.position)
+            if(atom.fitValue < best_ind.fitValue):
+                best_ind = population.getBestInd(NO_DIMS)
+            atom.calculateMass(population.mi_sum, population.getFitBest(), population.getFitWorst())
+            position, velocity = population.calculateVelocityAndPosition(ALPHA, BETA, atom, best_ind, curr_g+1, NGEN)
+            atom.position = position
+            atom.velocity = velocity
+
+            #atom.fitValue = costFunction(position)
+
+        population.updatePopulation()
+
+        curr_g += 1
+        
+        
+    #print("------------------")
+    del population
+    #print("Best individual is %s, %s" % (best_ind.position, best_ind.fitValue))
+    
+
+    return best_ind.position, best_ind.fitValue
+
+
+
+
+def optimizeDimention(dimention):
+    
+    global best_fit
+    global best_pos
+
+    alphas = [40, 50, 60]
+    betas = [0.1, 0.2, 0.3]
+
+    best_alpha = 0
+    best_beta = 0
+
+    for alpha in alphas:
+        for beta in betas:
+                
+            setParams(dimention, alpha, beta)
+            
+            for i in range(1, NO_EXP+1):
+                best_ind, best_indFit = initializeObjects(i)
+                if(best_fit > best_indFit):
+                    best_fit = best_indFit
+                    best_pos = best_ind
+                    best_alpha = alpha
+                    best_beta = beta
+                
+    print("Best individual: " + str(best_pos))
+    print(" -fitness value: " + str(best_fit))
+    print(" -dimention: " + str(dimention))
+    print(" -alpha: " + str(best_alpha))
+    print(" -beta: " + str(best_beta))
+                
+    best_fit = sys.float_info.max
+    best_pos = 0   
+    best_alpha = 0
+    best_beta = 0
+
+
+if __name__ == "__main__":
+    start_time = time.time()
+    dimentions = [2, 3, 5, 10, 20, 30]
+    print("Sve radi")
+    for dimention in dimentions:
+        optimizeDimention(dimention)
+
+    print("--- %s seconds ---" % (time.time() - start_time)))

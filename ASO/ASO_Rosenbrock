@@ -1,0 +1,216 @@
+import matplotlib.pyplot as plt
+import csv
+import math
+
+from numpy import average
+from atom import Atom
+from Population import Population
+import sys
+
+####General parameters####
+NO_EXP = 5 # number of experiments
+NO_DIMS = 2 #Size of the individual (number of dimensions)
+NGEN = 150 #number of generations
+POP_SIZE = 30  #population size
+#########################
+#####ASO parameters######
+ALPHA = 50
+BETA = 0.2
+
+####Other global variables####
+F_MIN = -5.0    #Rosenbrock function interval
+F_MAX = 5.0     #Rosenbrock function interval
+stop_evolution = False
+q_min_series = []
+q_max_series = []
+q_avg_series = []
+folderName = "ASO/Rosenbrock/"
+
+#Rosenbrock cost function
+def costFunction(individual):
+    #Implement Rosenbrock function
+    a = 1
+    b = 100
+    
+    n = NO_DIMS
+    fit_val = 0
+    for i in range(n-1):
+        xi = individual[i]
+        xii = individual[i+1]
+        fit_val += (b*math.pow(xii-math.pow(xi, 2), 2) + math.pow(a-xi, 2))
+    
+
+    return fit_val
+
+
+def setParams(dimention, alpha, beta, name):
+    #Set global variablesF_M
+    global stop_evolution
+    global q_min_series
+    global q_max_series
+    global q_avg_series
+    global folderName
+
+    stop_evolution = False    
+    q_min_series.clear()      
+    q_max_series.clear()    
+    q_avg_series.clear()
+    folderName = name
+    
+    #Set global variables
+    global ALPHA
+    global BETA
+    global NO_DIMS
+    ALPHA = alpha
+    BETA = beta
+    NO_DIMS = dimention
+
+
+def initializeObjects(iteration):
+    global q_min_series
+    global q_max_series
+    global q_avg_series
+    
+    # Variable for keeping track of the number of generations
+    q_min_series.clear()
+    q_max_series.clear()
+    q_avg_series.clear()
+    curr_g = 0
+    
+    #print("generatePopulation " + str(NO_DIMS))
+
+
+    population = Population(POP_SIZE, F_MIN, F_MAX)
+
+    population.generatePopulation(NO_DIMS)
+    
+    best_ind = population.getBestInd(NO_DIMS)
+
+    gFits = [1, 6]
+
+    #print("Pouplation generated " + str(list(map( lambda atom: len(atom.position), population.atoms))))
+    
+    while min(gFits) != 0.0 and curr_g < NGEN:
+        
+        #print("Generation--"+str(curr_g)+"--" + " best_ind " + str(best_ind.fitValue) +" population.fit_best " + str(population.fit_best))
+        
+        for atom in population.atoms:
+            
+            atom.fitValue = costFunction(atom.position)
+            if(atom.fitValue < best_ind.fitValue):
+                best_ind = population.getBestInd(NO_DIMS)
+            atom.calculateMass(population.mi_sum, population.getFitBest(), population.getFitWorst())
+            position, velocity = population.calculateVelocityAndPosition(ALPHA, BETA, atom, best_ind, curr_g+1, NGEN)
+            atom.position = position
+            atom.velocity = velocity
+
+            #atom.fitValue = costFunction(position)
+
+        population.updatePopulation()
+
+        curr_g += 1
+        
+        q_min_series.append(min(gFits))
+        #print("Best for gen " + str(curr_g) + " :" + str(min(gFits)))
+        q_max_series.append(max(gFits))
+        q_avg_series.append(average(gFits))
+        gFits.clear()
+        gFits = population.getFitValues()
+        
+    #print("------------------")
+    gFits.clear()
+    del population
+    #print("Best individual is(q_min_series)" + str(min(q_min_series)))
+    #print("Best individual is %s, %s" % (best_ind.position, best_ind.fitValue))
+    
+    #Visulaize and save final solution
+    f1 = plt.figure()
+    plt.plot(q_min_series, 'b', linewidth=0.6)
+    plt.plot(q_max_series, 'g', linewidth=0.6)
+    plt.plot(q_avg_series, 'orange', linewidth=0.6)
+    plt.xlabel('Generations')
+    plt.ylabel('Fitness values')
+    plt.legend(["MIN", "MAX", "AVG"], loc ="upper center", ncol = 3)
+    #plt.show()
+    title = folderName + "ASO_iter_" + str(iteration) + "_dubinska_tezina(" + str(ALPHA) + ")_tezina_mnozitelja(" + str(BETA) + ").png"
+    plt.savefig(title)
+    plt.clf()
+    
+
+    return best_ind.position, best_ind.fitValue
+
+
+def depAlpha(dimention):
+    alphas = [40, 50, 60]
+
+    for alpha in alphas:
+        beta = 0.2
+        name = "ASO/Rosenbrock/Alpha/Dimention" + str(dimention) + "/"
+        
+        setParams(dimention, alpha, beta, name)
+        
+        fields = ['Best individual', 'Fitness value']
+        rows = []
+        
+        for i in range(1, NO_EXP+1):
+            best_ind, fit_value = initializeObjects(i)
+            rows.append([str(best_ind), str(fit_value)])
+        
+        filename = folderName + "ASO_depAlpha(" + str(alpha) + ").csv"
+        #print("-----------------------")
+        # writing to csv file  
+        with open(filename, 'w') as csvfile:  
+            # creating a csv writer object  
+            csvwriter = csv.writer(csvfile)  
+                
+            # writing the fields  
+            csvwriter.writerow(fields)  
+                
+            # writing the data rows  
+            csvwriter.writerows(rows)
+
+
+def depBeta(dimention):
+    betas = [0.1, 0.2, 0.3]
+
+    for beta in betas:
+        alpha = 50
+
+        name = "ASO/Rosenbrock/Beta/Dimention" + str(dimention) + "/"
+        setParams(dimention, alpha, beta, name)
+        
+        fields = ['Best individual', 'Fitness value']
+        rows = []
+        
+        for i in range(1, NO_EXP+1):
+            best_ind, fit_value = initializeObjects(i)
+            rows.append([str(best_ind), str(fit_value)])
+        
+        filename = folderName + "ASO_depBeta(" + str(beta) + ").csv"
+      
+        # writing to csv file  
+        with open(filename, 'w') as csvfile:
+
+            # creating a csv writer object  
+            csvwriter = csv.writer(csvfile)  
+                
+            # writing the fields  
+            csvwriter.writerow(fields)  
+                
+            # writing the data rows  
+            csvwriter.writerows(rows)
+
+
+
+def optimizeDimention(dimention):
+    
+    depAlpha(dimention)
+    depBeta(dimention)
+
+
+
+if __name__ == "__main__":
+    dimentions = [2, 3, 5, 10, 20, 30]
+
+    for dimention in dimentions:
+        optimizeDimention(dimention)

@@ -1,0 +1,93 @@
+from pandas import *
+import csv
+
+
+
+def getBestIndividual(fileName):
+    #print("filename: " + str(fileName) + "\n\n")
+    if 'GA_depMutation' in fileName:
+        print("filename: " + str(fileName) + "\n\n")
+    # reading CSV file
+    data = read_csv(fileName)
+ 
+    
+    bestInds = data['Best individual'].tolist()
+    fit_values = data['Fitness value'].tolist()
+    fit_value = min(fit_values)
+    bestInd = []
+    for i in range(len(fit_values)):
+        if(fit_values[i] == fit_value):
+            bestInd = bestInds[i]
+
+    return bestInd, fit_value
+
+def writeToFile(fileName, fields, rows):
+
+    # writing to csv file  
+    with open(fileName, 'w') as csvfile:
+
+        # creating a csv writer object  
+        csvwriter = csv.writer(csvfile)  
+            
+        # writing the fields  
+        csvwriter.writerow(fields) 
+
+        # writing the data rows  
+        csvwriter.writerows(rows)
+
+
+if __name__ == "__main__":
+
+    roots = ['ASO/Rastrigin/', 'ASO/Rosenbrock/', 'ASO/Pressure_Vessel/']
+
+    for root in roots:
+        
+        parameters = ['Alpha/', 'Beta/']
+
+        for parameter in parameters:
+
+            dimentions = ['Dimention2/', 'Dimention5/', 'Dimention10/', 'Dimention20/', 'Dimention30/']
+            num_dim = [2, 5, 10, 20, 30]
+            new_file = root + parameter + "Results.csv"
+            fields = ['Best individual', 'Fitness value', 'Dimention', 'Alpha', 'Beta']
+            
+            rows = []
+            i = 0
+            for dimention in dimentions:
+                folderName = root + parameter + dimention
+                dim = num_dim[i]
+                i = i + 1
+                if(root == 'ASO/Pressure_Vessel/'):
+                    folderName = root + parameter
+                    dim = 4
+                if(parameter == 'Alpha/'):
+                    alphas = [40, 50, 60]
+
+                    for alpha in alphas:
+                        beta = 0.2
+                        fileName = folderName + "ASO_depAlpha(" + str(alpha) + ").csv"
+                        best_ind, fit_value = getBestIndividual(fileName)
+                        rows.append([str(best_ind), str(fit_value), str(dim), str(alpha), str(beta)])
+                
+                elif(parameter == 'Beta/'):
+                    betas = [0.1, 0.2, 0.3]
+
+                    for beta in betas:
+                        alpha = 50
+
+
+                        fileName = folderName + "ASO_depBeta(" + str(beta) + ").csv"
+                        best_ind, fit_value = getBestIndividual(fileName)
+                        rows.append([str(best_ind), str(fit_value), str(dim),  str(alpha), str(beta)])
+            
+                writeToFile(new_file, fields, rows)
+
+                if(root == 'GA/Pressure_Vessel/'):
+                    break
+
+
+                
+                    
+                
+
+
