@@ -1,1 +1,13 @@
-# Atom-search-optimization
+# Metaheuristic Optimization using Genetic Algorithm, Particle Swarm Optimization, and Atom Search Optimization Algorithms in Python
+
+This GitHub repository houses a collection of implementations of popular metaheuristic optimization algorithms in Python, including Genetic Algorithm (GA), Particle Swarm Optimization (PSO), and Atom Search Optimization (ASO). These algorithms offer versatile and efficient solutions for solving optimization problems across various domains, ranging from engineering design and scheduling to machine learning model tuning and parameter optimization.
+
+Genetic Algorithm (GA) is a stochastic optimization technique inspired by the process of natural selection and genetics. It maintains a population of candidate solutions, which are iteratively evolved through processes such as selection, crossover, and mutation to generate new potential solutions. GA mimics the survival of the fittest principle, where better-performing solutions have a higher chance of being selected for reproduction, leading to the exploration of the solution space and convergence towards optimal or near-optimal solutions.
+
+Particle Swarm Optimization (PSO) is a population-based optimization algorithm inspired by the social behavior of bird flocks or fish schools. In PSO, each potential solution is represented as a particle in a multidimensional search space. These particles move through the search space, adjusting their positions based on their own best-known position and the global best-known position found by the entire swarm. PSO emphasizes exploration and exploitation simultaneously, with particles adjusting their movements based on both local and global information to converge toward promising regions of the search space.
+
+Atom Search Optimization (ASO) is a recently proposed metaheuristic optimization algorithm inspired by the behavior of atoms in a chemical system. ASO models each candidate solution as an atom, and these atoms interact with each other based on predefined rules to explore and exploit the search space efficiently. ASO employs the principles of attraction, repulsion, and random motion to guide the search process toward optimal or near-optimal solutions. ASO aims to strike a balance between exploration and exploitation, leveraging atomic interactions to navigate complex optimization landscapes effectively.
+
+Each of these algorithms offers unique strategies for exploring and exploiting solution spaces, making them suitable for different types of optimization problems and scenarios.
+
+These algorithms were tested on the Rastrigin function, Rosenbrock function, and the Pressure Vessel Design problem to evaluate their performance in terms of speed and accuracy.
